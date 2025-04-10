@@ -315,6 +315,96 @@ app.get("/merge-excel", async (req, res) => {
   res.download(mergedFilePath);
 });
 
+
+app.get('/alertsheet', async (req, res) => {
+  try {
+    const alertFolder = path.join(__dirname, 'public/alert');
+    const files = fs.readdirSync(alertFolder);
+    const excelFile = files.find(file => file.endsWith('.xlsx'));
+
+    if (!excelFile) {
+      return res.status(404).send('No Excel file found in alert folder.');
+    }
+
+    const filePath = path.join(alertFolder, excelFile);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
+
+    const worksheet = workbook.worksheets[0];
+    const newWorkbook = new ExcelJS.Workbook();
+    const newSheet = newWorkbook.addWorksheet('Alerts_Yesterday');
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yyyymmdd = yesterday.toISOString().split('T')[0];
+
+    // ✅ Step 1: Copy merged cells from original to new sheet
+    (worksheet.model.merges || []).forEach((mergeRange) => {
+      newSheet.mergeCells(mergeRange);
+    });
+
+    // ✅ Step 2: Copy rows 1 and 2 as-is (header + merged title row)
+    [1, 2].forEach(rowNumber => {
+      const originalRow = worksheet.getRow(rowNumber);
+      const newRow = newSheet.getRow(rowNumber);
+      originalRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        const newCell = newRow.getCell(colNumber);
+        newCell.value = cell.value;
+        newCell.style = cell.style;
+        if (cell.hyperlink) newCell.hyperlink = cell.hyperlink;
+      });
+      newRow.commit();
+    });
+
+    // ✅ Step 3: Filter data rows for yesterday
+    worksheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+      if (rowNumber <= 2) return; // Skip headers
+
+      const cell = row.getCell(4); // Assuming column 4 = date
+      let cellDate;
+
+      if (cell.value instanceof Date) {
+        cellDate = cell.value;
+      } else if (typeof cell.value === 'object' && cell.value?.text) {
+        cellDate = new Date(cell.value.text);
+      } else {
+        cellDate = new Date(cell.value);
+      }
+
+      const isYesterday = !isNaN(cellDate) &&
+        cellDate.toISOString().split('T')[0] === yyyymmdd;
+
+      if (isYesterday) {
+        const newRow = newSheet.addRow(row.values);
+        row.eachCell((cell, colNumber) => {
+          const newCell = newRow.getCell(colNumber);
+          newCell.style = cell.style;
+          if (cell.hyperlink) newCell.hyperlink = cell.hyperlink;
+        });
+      }
+    });
+    for (let i = 1; i <= 25; i++) {
+      newSheet.getColumn(i).width = 25;
+    }
+
+    // ✅ Optional: Beautify title
+    newSheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
+    newSheet.getCell('A1').font = { bold: true, size: 14 };
+
+
+    // ✅ Save and download
+    const outputPath = path.join('output', 'alerts_yesterday.xlsx');
+    await newWorkbook.xlsx.writeFile(outputPath);
+
+    res.download(outputPath, 'alerts_yesterday.xlsx');
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
