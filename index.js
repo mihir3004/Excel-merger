@@ -16,7 +16,20 @@ const mergeExcelData = async () => {
     console.log("Error: Exactly three Excel files are required.");
     return null;
   }
-
+  function getCellFillHex(cell) {
+    if (
+      cell.fill &&
+      cell.fill.type === "pattern" &&
+      cell.fill.fgColor &&
+      cell.fill.fgColor.argb
+    ) {
+      // ARGB is like 'FFFFC000' — drop the first two 'FF' (alpha)
+      return `#${cell.fill.fgColor.argb.slice(2)}`;
+    }
+  
+    return null; // No color or unsupported format
+  }
+  
   const workbook = new ExcelJS.Workbook();
   const excelData = await Promise.all(
     files.map(async (file) => {
@@ -48,14 +61,13 @@ const mergeExcelData = async () => {
         .filter(
           (row) =>
             row && row.every((cell) => cell !== null && cell.value !== "")
-        ); // Remove empty first index
-      const dataStartRow = headerRowCount + 1; // Data starts after header
+        ); 
+      const dataStartRow = headerRowCount + 1; 
 
       if (index === 0) {
         (sheet.model.merges || []).forEach((merge) => {
           worksheet.mergeCells(merge);
         });
-        // Copy first 3 header rows with styles
         for (let j = 1; j <= headerRowCount; j++) {
           const sourceRow = sheet.getRow(j);
           const newRow = worksheet.getRow(j);
@@ -67,19 +79,9 @@ const mergeExcelData = async () => {
         }
       }
 
-      // Extract data rows (skip headers)
-      //   let dataRows = rows.slice(dataStartRow);
-
-      //   if (i == 1) {
-      //     dataRows = rows.slice(1);
-
-      //     // console.log(rows);
-      //   }
       rows.forEach((row, rowIndex) => {
         const sourceRow = sheet.getRow(rowIndex + dataStartRow);
-        if (i == 0 && index == 0) {
-          console.log(sourceRow.values);
-        }
+       
         const isEmptyRow = sourceRow.values.every(
           (cell) => cell === null || cell === ""
         );
@@ -90,6 +92,11 @@ const mergeExcelData = async () => {
             const newCell = newRow.getCell(colNumber);
             newCell.value = cell.formula ? cell.result || null : cell.value;
             newCell.style = { ...cell.style };
+            const hexColor = getCellFillHex(cell);
+    if (hexColor) {
+      console.log(`Cell at ${cell.address} has fill color: ${hexColor}`);
+    }
+
           });
           if (newRow.getCell(1).value) {
             newRow.getCell(1).value = serialNumber++;
@@ -97,12 +104,196 @@ const mergeExcelData = async () => {
         }
       });
     }
-
-    // Set default column width
     worksheet.columns.forEach((col) => {
       col.width = 25;
     });
   }
+  // const yellowFilteredSheet = workbook.addWorksheet("Vehicle Release List");
+  const sourceSheet = workbook.getWorksheet(1);
+  // // Copy header from first sheet (3 rows like Sheet1)
+  // const headerRow = yellowFilteredSheet.getRow(2); // Adjust row number if needed
+  // headerRow.getCell(1).value = "Vehicle Release";
+  // headerRow.getCell(1).alignment = { vertical: "middle", horizontal: "center" };
+  // headerRow.getCell(1).font = { bold: true, size: 18 };
+  // yellowFilteredSheet.mergeCells(2, 1, 2, sourceSheet.columnCount); // Merge from column 1 to last
+  
+  // // Add headers with bold, centered, and bordered styles
+  // for (let j = 3; j <= 3; j++) {
+  //   const sourceRow = sourceSheet.getRow(j);
+  //   const newRow = yellowFilteredSheet.getRow(j);
+  
+  //   sourceRow.eachCell((cell, colNumber) => {
+  //     const newCell = newRow.getCell(colNumber);
+  //     newCell.value = cell.value;
+  
+  //     newCell.alignment = { horizontal: "center", vertical: "middle" };
+  //     newCell.font = { bold: true,size:18,...newCell.font };
+  
+  //     newCell.border = {
+  //       top: { style: "thin" },
+  //       left: { style: "thin" },
+  //       bottom: { style: "thin" },
+  //       right: { style: "thin" },
+  //     };
+  //   });
+  // }
+  
+  
+  // let redRowSerial = 1;
+  // let destRowIndex = 4; // Start writing data from row 4
+  // for (let i = 1; i <= sheetCount; i++) {
+  //   const mergedSheet = workbook.getWorksheet(i);
+  //   mergedSheet.eachRow((row, rowNumber) => {
+  //     if (rowNumber <= 3) return; // Skip headers
+  
+  //     const targetCell = row.getCell(10);
+  //     const fillHex = getCellFillHex(targetCell);
+  
+  //     if (fillHex === "#FFFF00") {
+  //       const newRow = yellowFilteredSheet.getRow(destRowIndex++);
+  //       row.eachCell((cell, colNumber) => {
+  //         const newCell = newRow.getCell(colNumber);
+  //         newCell.value = cell.value;
+  //         newCell.style = { ...cell.style };
+  //       });
+  
+  
+  //       // Assign serial number to column 1
+  //       newRow.getCell(1).value = redRowSerial++;
+  //     }
+  //   });
+    
+    
+  // }
+  // yellowFilteredSheet.columns.forEach((col) => {
+  //   col.width = 25; // You can change the width value as needed
+  // });
+  const orangeFilteredSheet = workbook.addWorksheet("Vehicle Detained List");
+  const headerRow1 = orangeFilteredSheet.getRow(2); // Adjust row number if needed
+
+  headerRow1.getCell(1).value = "Vehicle Detained";
+  headerRow1.getCell(1).alignment = { vertical: "middle", horizontal: "center" };
+  headerRow1.getCell(1).font = { bold: true, size: 18 };
+  orangeFilteredSheet.mergeCells(2, 1, 2, sourceSheet.columnCount); // Merge from column 1 to last
+  
+  // Add headers with bold, centered, and bordered styles
+  for (let j = 3; j <= 3; j++) {
+    const sourceRow = sourceSheet.getRow(j);
+    const newRow = orangeFilteredSheet.getRow(j);
+  
+    sourceRow.eachCell((cell, colNumber) => {
+      const newCell = newRow.getCell(colNumber);
+      newCell.value = cell.value;
+  
+      newCell.alignment = { horizontal: "center", vertical: "middle" };
+      newCell.font = { bold: true,size:18,...newCell.font };
+  
+      newCell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+  }
+  
+  
+   redRowSerial = 1;
+  destRowIndex = 4; // Start writing data from row 4
+  for (let i = 1; i <= sheetCount; i++) {
+    const mergedSheet = workbook.getWorksheet(i);
+    mergedSheet.eachRow((row, rowNumber) => {
+      if (rowNumber <= 3) return; // Skip headers
+  
+      const targetCell = row.getCell(11);
+      const fillHex = getCellFillHex(targetCell);
+
+      if (fillHex === "#FFC000") {
+        const newRow = orangeFilteredSheet.getRow(destRowIndex++);
+        row.eachCell((cell, colNumber) => {
+          const newCell = newRow.getCell(colNumber);
+          newCell.value = cell.value;
+          newCell.style = { ...cell.style };
+        });
+  
+        // Assign serial number to column 1
+        newRow.getCell(1).value = redRowSerial++;
+      }
+    });
+    
+    
+  }
+  orangeFilteredSheet.columns.forEach((col) => {
+    col.width = 25; // You can change the width value as needed
+  });
+
+
+
+
+
+
+  const yellowFilteredSheet = workbook.addWorksheet("Vehicle Release List");
+  const headerRow = yellowFilteredSheet.getRow(2); // Adjust row number if needed
+
+  headerRow.getCell(1).value = "Vehicle Released";
+  headerRow.getCell(1).alignment = { vertical: "middle", horizontal: "center" };
+  headerRow.getCell(1).font = { bold: true, size: 18 };
+  yellowFilteredSheet.mergeCells(2, 1, 2, sourceSheet.columnCount); // Merge from column 1 to last
+  
+  // Add headers with bold, centered, and bordered styles
+  for (let j = 3; j <= 3; j++) {
+    const sourceRow = sourceSheet.getRow(j);
+    const newRow = yellowFilteredSheet.getRow(j);
+  
+    sourceRow.eachCell((cell, colNumber) => {
+      const newCell = newRow.getCell(colNumber);
+      newCell.value = cell.value;
+  
+      newCell.alignment = { horizontal: "center", vertical: "middle" };
+      newCell.font = { bold: true,size:18,...newCell.font };
+  
+      newCell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" },
+      };
+    });
+  }
+  
+  
+   redRowSerial = 1;
+  destRowIndex = 4; // Start writing data from row 4
+  for (let i = 1; i <= sheetCount; i++) {
+    const mergedSheet = workbook.getWorksheet(i);
+    mergedSheet.eachRow((row, rowNumber) => {
+      if (rowNumber <= 3) return; // Skip headers
+  
+      const targetCell = row.getCell(10);
+      const fillHex = getCellFillHex(targetCell);
+
+      if (fillHex === "#FFFF00") {
+        const newRow = yellowFilteredSheet.getRow(destRowIndex++);
+        row.eachCell((cell, colNumber) => {
+          const newCell = newRow.getCell(colNumber);
+          newCell.value = cell.value;
+          newCell.style = { ...cell.style };
+        });
+  
+        // Assign serial number to column 1
+        newRow.getCell(1).value = redRowSerial++;
+      }
+    });
+    
+    
+  }
+  yellowFilteredSheet.columns.forEach((col) => {
+    col.width = 25; // You can change the width value as needed
+  });
+
+
+
+
 
   const outputPath = path.join(
     __dirname,
