@@ -168,10 +168,10 @@ const mergeExcelData = async () => {
   // yellowFilteredSheet.columns.forEach((col) => {
   //   col.width = 25; // You can change the width value as needed
   // });
-  const orangeFilteredSheet = workbook.addWorksheet("Vehicle Detained List");
+  const orangeFilteredSheet = workbook.addWorksheet("Vehicle Release List");
   const headerRow1 = orangeFilteredSheet.getRow(2); // Adjust row number if needed
 
-  headerRow1.getCell(1).value = "Vehicle Detained";
+  headerRow1.getCell(1).value = "Vehicle Release";
   headerRow1.getCell(1).alignment = { vertical: "middle", horizontal: "center" };
   headerRow1.getCell(1).font = { bold: true, size: 18 };
   orangeFilteredSheet.mergeCells(2, 1, 2, sourceSheet.columnCount); // Merge from column 1 to last
@@ -232,10 +232,10 @@ const mergeExcelData = async () => {
 
 
 
-  const yellowFilteredSheet = workbook.addWorksheet("Vehicle Release List");
+  const yellowFilteredSheet = workbook.addWorksheet("Vehicle Detained List");
   const headerRow = yellowFilteredSheet.getRow(2); // Adjust row number if needed
 
-  headerRow.getCell(1).value = "Vehicle Released";
+  headerRow.getCell(1).value = "Vehicle Detained";
   headerRow.getCell(1).alignment = { vertical: "middle", horizontal: "center" };
   headerRow.getCell(1).font = { bold: true, size: 18 };
   yellowFilteredSheet.mergeCells(2, 1, 2, sourceSheet.columnCount); // Merge from column 1 to last
